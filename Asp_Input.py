@@ -9,7 +9,10 @@ DATA_FILE = "production_data.csv"
 # Function to load data from CSV or initialize empty list
 def load_data():
     if os.path.exists(DATA_FILE):
-        return pd.read_csv(DATA_FILE).to_dict("records")
+        try:
+            return pd.read_csv(DATA_FILE).to_dict("records")
+        except Exception:
+            return []
     else:
         return []
 
@@ -38,20 +41,24 @@ with col1:
 with col2:
     size = st.selectbox("📏 Size", ["4", "5", "6", "7", "7T", "8", "9", "10", "11", "12"])
 with col3:
-    time = st.selectbox("⏰Time", [f"{h} AM" for h in range(7, 12)] + [f"{h} PM" for h in range(1, 5)])
+    time = st.selectbox("⏰ Time", [f"{h} AM" for h in range(7, 12)] + [f"{h} PM" for h in range(1, 5)])
 
 # Side-by-side input fields for Model, Quantity, and Reworks Quantity
 col1, col2, col3 = st.columns(3)
 with col1:
-    model = st.selectbox("👟Model", ["NSM", "Shox", "Ride"])
+    model = st.selectbox("👟 Model", ["NSM", "Shox", "Ride"])
 with col2:
     quantity = st.number_input("📦 Quantity", min_value=0, value=0, step=1)
 with col3:
     reworks = st.number_input("🔄 Reworks Quantity", min_value=0, value=0, step=1)
 
 # Calculate Reworks Percentage
-reworks_percent = (reworks / quantity * 100) if quantity > 0 else 0
-down_time = st.selectbox("⏳ Down Time", [f"{i} minutes" for i in range(15, 121, 15)])
+col1, col2 = st.columns(2)
+with col1:
+    reworks_percent = (reworks / quantity * 100) if quantity > 0 else 0
+    down_time = st.selectbox("⏳ Down Time", [f"{i} minutes" for i in range(15, 121, 15)])
+with col2:
+    remark = st.text_input("📝 Reason")
 
 # Function for grouped input fields
 def grouped_inputs(label):
@@ -80,7 +87,7 @@ if st.button("Save Entry"):
     new_entry = {
         "Date": date, "Shift": shift, "Time": time, "Model": model, "Material": material,
         "Size": size, "Quantity": quantity, "Reworks Quantity": reworks, "Reworks %": reworks_percent,
-        "Down Time": down_time, "T&H_P": T_H_P, "T&H_R": T_H_R, "T&H_L": T_H_L,
+        "Down Time": down_time, "Remark": remark, "T&H_P": T_H_P, "T&H_R": T_H_R, "T&H_L": T_H_L,
         "M&M_P": M_M_P, "M&M_R": M_M_R, "M&M_L": M_M_L, "PNC_P": PNC_P, "PNC_R": PNC_R,
         "PNC_L": PNC_L, "CS_P": CS_P, "CS_R": CS_R, "CS_L": CS_L, "WSP_P": WSP_P,
         "WSP_R": WSP_R, "WSP_L": WSP_L, "WSPRINT_P": WSPRINT_P, "WSPRINT_R": WSPRINT_R,
@@ -89,7 +96,7 @@ if st.button("Save Entry"):
     }
     st.session_state.data.append(new_entry)
     save_data(st.session_state.data)
-    st.success("Entry saved!")
+    st.success("✅ Entry saved!")
     st.rerun()  # Rerun the script to update the dataframe
 
 # Convert to DataFrame and display
@@ -106,10 +113,14 @@ if not df.empty:
     if st.button("Delete Row"):
         del st.session_state.data[row_to_delete]
         save_data(st.session_state.data)
-        st.success(f"Deleted row {row_to_delete}")
+        st.success(f"❌ Deleted row {row_to_delete}")
         st.rerun()  # Rerun the script to update the dataframe
 
-# Save to CSV
-if st.button("Download CSV"):
-    df.to_csv("production_data.csv", index=False)
-    st.success("Data saved as production_data.csv")
+# Save to CSV with a download button
+if not df.empty:
+    st.download_button(
+        label="📥 Download CSV",
+        data=df.to_csv(index=False),
+        file_name="production_data.csv",
+        mime="text/csv",
+    )
